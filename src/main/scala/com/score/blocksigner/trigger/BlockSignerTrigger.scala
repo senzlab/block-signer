@@ -2,22 +2,25 @@ package com.score.blocksigner.trigger
 
 import java.util
 
+import com.score.blocksigner.config.AppConf
 import com.score.blocksigner.util.SenzLogger
+import org.apache.cassandra.config.Schema
 import org.apache.cassandra.db.partitions.Partition
-import org.apache.cassandra.db.{Clustering, Mutation}
+import org.apache.cassandra.db.{Clustering, Mutation, RowUpdateBuilder}
 import org.apache.cassandra.triggers.ITrigger
+import org.apache.cassandra.utils.{FBUtilities, UUIDGen}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-class BlockSignerTrigger extends ITrigger with SenzLogger {
+class BlockSignerTrigger extends ITrigger with SenzLogger with AppConf {
   override def augment(partition: Partition): util.List[Mutation] = {
     val message = new mutable.HashMap[String, String]()
 
     // setting the id
     message.put("table_id", partition.metadata().getKeyValidator.getString(partition.partitionKey().getKey))
 
-    //Parsing Non-ID related fields
+    // Parsing Non-ID related fields
     try {
       val it = partition.unfilteredIterator()
       while (it.hasNext) {
@@ -36,9 +39,15 @@ class BlockSignerTrigger extends ITrigger with SenzLogger {
         }
       }
     } catch {
-      case e =>
+      case e: Exception =>
         logError(e)
     }
+
+    // inset new column
+    val audit = new RowUpdateBuilder(Schema.instance.getCFMetaData(keyspace, table), FBUtilities.timestampMicros(), UUIDGen.getTimeUUID())
+    audit.add("keyspace_name", partition.metadata().ksName)
+    audit.add("table_name", partition.metadata().cfName)
+    audit.add("primary_key", partition.metadata().getKeyValidator.getString(partition.partitionKey().getKey))
 
     List[Mutation]().asJava
   }
