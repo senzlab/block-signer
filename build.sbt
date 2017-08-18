@@ -10,11 +10,12 @@ libraryDependencies ++= {
 
   Seq(
     "org.apache.cassandra"    % "cassandra-all"             % cassandraVersion,
-    "org.slf4j"               % "slf4j-api"                 % "1.7.5",
     "org.scalatest"           % "scalatest_2.11"            % "2.2.1"               % "test",
     "com.typesafe"            % "config"                    % "1.3.1"
   )
 }
+
+excludeDependencies += "commons-logging" % "commons-logging"
 
 resolvers ++= Seq(
   "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
